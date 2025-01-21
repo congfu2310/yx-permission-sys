@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" xml:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <!-- 样式-->
+    <style>
+        .layui-tab-title .layui-this {
+            background-color: #009688;
+            color: #eee;
+        }
+
+        .first-tab i.layui-tab-close {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="layui-layout-body">
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo">迎学后台管理系统</div>
+        <!-- 头部区域（可配合layui已有的水平导航） -->
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item"><a id="deptName" href="javascript:;"></a></li>
+            <li class="layui-nav-item">
+                <a href="javascript:;" style="margin-right: 15px">
+                    <i class="layui-icon layui-icon-username" style="font-size: 30px; color: #1E9FFF;"></i>
+                    <span id="nickName"></span>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="javascript:;" data-id="userProper" data-title="编辑基本资料"
+                           data-url="/index/users/info" class="menuNvaBar">编辑基本资料</a></dd>
+                    <dd><a href="javascript:;" data-id="userSafe" data-title="安全设置" data-url="/index/users/pwd"
+                           class="menuNvaBar">更换密码</a></dd>
+                </dl>
+            </li>
+            <li class="layui-nav-item"><a href="javascript:;" id="logout">退出</a></li>
+        </ul>
+    </div>
+    <!-- 左侧菜单-->
+    <div id="mainmenu" class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <div class="navBar layui-side-scroll" id="navBarId"></div>
+        </div>
+    </div>
+    <div class="layui-body">
+        <!-- 内容主体区域 -->
+        <div class="layui-tab" lay-filter="tab" lay-allowclose="true">
+            <ul class="layui-tab-title">
+                <li class="first-tab layui-this">主页</li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <!--th:src 是 Thymeleaf 提供的一个属性替换功能，用于动态生成 URL。@{} 是 Thymeleaf 的语法，
+                    用于解析上下文路径，使得 URL 可以相对于应用程序的根路径生成-->
+                    <iframe th:src="@{/index/main}" frameborder="0" name="content" width="100%" id="home"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="/layui/layui.js"></script>
+<script src="/js/core.util.js"></script>
+<script>
+    layui.use(['jquery', 'element', 'layer'], function () {
+        var $ = layui.jquery;
+        var element = layui.element;
+        var layer = layui.layer;
+        frameWH();
+
+        //设置主体内容层高度
+        function frameWH() {
+            var h = $(window).height() - 41 - 10 - 35 - 10 - 44 - 10;
+            $("iframe").css("height", h + "px");
+        };
+
+        //递归获取导航栏无线层级
+        var getChild = function (item, ulHtml) {
+            ulHtml += '<dl class="layui-nav-child">';
+            $.each(item, function (index, child) {
+                if (child.children != null && child.children.length > 0) {
+                    ulHtml += '<a>' + child.title + '</a>';
+                    ulHtml += getChild(child.children, "");
+                } else {
+                    ulHtml += '<dd><a href="javascript:;" data-url="' + child.url + '" data-title="' + child.title + '" data-id="' + child.id + '" class="menuNvaBar">';
+                    ulHtml += '<cite>' + child.title + '</cite></a></dd>';
+                }
+
+            });
+            ulHtml += "</dl>"
+            return ulHtml;
+        };
+        CoreUtil.sendAjax("/api/home", null, function (res) {
+            //使用 jQuery 将返回数据中的 deptName 填充到页面元素 ID 为 deptName 的 HTML 元素中，并前面加上 "所属机构:" 字样
+            $("#deptName").html("所属机构:" + res.data.userInfoVO.deptName);
+            $("#nickName").html(res.data.userInfoVO.username);
+            //将返回数据中的菜单数据存储的data中
+            var data = res.data.menus;
+            console.log("aaa")
+            console.log(res);
+            //如果返回的数据不为空且长度大于0
+            if (data != "" && data.length > 0) {
+                var ulHtml = '<ul class="layui-nav layui-nav-tree layui-left-nav">';
+                if (data != null && data.length > 0) {
+                    //遍历 data 数组
+                    $.each(data, function (index, item) {
+                        //如果索引为0，那么添加一个li
+                        if (index == 0) {
+                            ulHtml += '<li class="layui-nav-item layui-nav-itemed">';
+                        } else {
+                            ulHtml += '<li class="layui-nav-item">';
+                        }
+                        ulHtml += '<a href="javascript:;">';
+                        ulHtml += '<cite>' + item.title + '</cite>';
+                        ulHtml += '</a>'
+                        //若当前菜单项有子菜单
+                        if (item.children != null && item.children.length > 0) {
+                            ulHtml += '<dl class="layui-nav-child">';
+                            $.each(item.children, function (index, child) {
+                                if (child.children != null && child.children.length > 0) {
+                                    ulHtml += '<a>' + child.title + '</a>';
+                                    //这里递归调用getchild去遍历
+                                    ulHtml += getChild(child.children, "");
+                                } else {
+                                    ulHtml += '<dd><a href="javascript:;" data-url="' + child.url + '" data-title="' + child.title + '" data-id="' + child.id + '" class="menuNvaBar">';
+                                    ulHtml += '<cite>' + child.title + '</cite></a></dd>';
+                                }
+
+                            });
+                            //关闭 dl 元素
+                            ulHtml += "</dl>"
+                        }
+                        ulHtml += '</li>'
+                    });
+                }
+                ulHtml += '</ul>';
+                //将生成的 HTML 代码插入到 navBar 类的 HTML 元素中
+                $(".navBar").html(ulHtml);
+                element.init();  //初始化页面元素
+
+            } else {
+                //如果data为空，则清空navBarId 的 HTML 元素
+                $("#navBarId").empty();
+            }
+            //关闭所有的弹出层
+            top.layer.closeAll();
+        }, "GET", false); // false -- 同步请求为false
+
+        $(document).on('click', '.menuNvaBar', function () {
+            var dataid = $(this);
+            if ($(".layui-tab-title li[lay-id]").length <= 0) {
+                active.tabAdd(dataid.attr("data-url"), dataid.attr("data-id"), dataid.attr("data-title"));
+            } else {
+                var isData = false;
+                $.each($(".layui-tab-title li[lay-id]"), function () {
+                    if ($(this).attr("lay-id") == dataid.attr("data-id")) {
+                        isData = true;
+                    }
+                })
+                if (isData == false) {
+                    active.tabAdd(dataid.attr("data-url"), dataid.attr("data-id"), dataid.attr("data-title"));
+                }
+            }
+            active.tabChange(dataid.attr("data-id"));
+        });
+
+        //封装触发事件
+        var active = {
+            tabAdd: function (url, id, title) {
+                layer.msg(title);
+                if (url != "" && url != null && url != undefined) {
+                    element.tabAdd('tab', {
+                        title: title
+                        ,
+                        content: '<iframe data-frameid="' + id + '" frameborder="0" name="content" width="100%" src="' + url + '"></iframe>'
+                        ,
+                        id: id
+                    })
+                }
+                frameWH();//计算框架高度
+            },
+            tabChange: function (id) {
+                //切换到指定Tab项
+                element.tabChange('tab', id); //切换到：用户管理
+                $("iframe[data-frameid='" + id + "']").attr("src", $("iframe[data-frameid='" + id + "']").attr("src"))//切换后刷新框架
+            },
+            tabDelete: function (id) {
+                element.tabDelete("tab", id);//删除
+            }
+        };
+        //退出登录
+        $("#logout").click(function () {
+            logoutDialog();
+        });
+        //删除前确认对话框
+        var logoutDialog = function () {
+            layer.open({
+                content: '确定要退出登录么？',
+                yes: function (index, layero) {
+                    layer.close(index); //如果设定了yes回调，需进行手工关闭
+                    CoreUtil.sendAjax("/api/user/logout", null, function (res) {
+                        top.window.location.href = "/index/login";
+                    }, "GET", true);
+                }
+            });
+        };
+    })
+</script>
+</html>
